@@ -77,7 +77,7 @@ std::vector<std::string> parser(std::string input){
         if(input[i] == '-' || input[i] == '+'){
             // at beginning of input || in front of operator || in front of '('
             if(i==0 || contains(&opmap, input[i-1]) || input[i-1] == '('){
-                output.push_back(std::string() += input[i] + "1"); // "-1" or "+1"
+                output.push_back(std::string(1, input[i]) + "1"); // "-1" or "+1"
                 output.push_back("*");
             }
             output.push_back(std::string() + input[i]);
@@ -282,13 +282,21 @@ std::string compute(std::queue<std::string>* input){
 
 int main(){
     // define operator keys in opmap
-    opmap['+'] = op('+', 2, LEFT, BINARY);
-    opmap['-'] = op('-', 2, LEFT, BINARY);
-    opmap['*'] = op('*', 3, LEFT, BINARY);
-    opmap['/'] = op('/', 3, LEFT, BINARY);
-    opmap['%'] = op('%', 3, LEFT, BINARY);
-    opmap['^'] = op('^', 4, RIGHT, BINARY);
-    opmap['!'] = op('!', 5, LEFT, UNARY);
+    // opmap['+'] = op('+', 2, LEFT, BINARY);
+    // opmap['-'] = op('-', 2, LEFT, BINARY);
+    // opmap['*'] = op('*', 3, LEFT, BINARY);
+    // opmap['/'] = op('/', 3, LEFT, BINARY);
+    // opmap['%'] = op('%', 3, LEFT, BINARY);
+    // opmap['^'] = op('^', 4, RIGHT, BINARY);
+    // opmap['!'] = op('!', 5, LEFT, UNARY);
+
+    opmap.emplace('+', op('+', 2, LEFT, BINARY));
+    opmap.emplace('-', op('-', 2, LEFT, BINARY));
+    opmap.emplace('*', op('*', 3, LEFT, BINARY));
+    opmap.emplace('/', op('/', 3, LEFT, BINARY));
+    opmap.emplace('%', op('%', 3, LEFT, BINARY));
+    opmap.emplace('^', op('^', 4, RIGHT, BINARY));
+    opmap.emplace('!', op('!', 5, LEFT, UNARY));
 
 
     constants.insert ({"e", "pi", "i"});
@@ -308,7 +316,7 @@ int main(){
     std::cin >> expr;
 
     std::queue<std::string>* RPN = shunting_yard(parser(expr));
-    if(!RPN){ return 1;}
+    if(!RPN){ return 1; }
 
     while(!(*RPN).empty()){
         std::cout << (*RPN).front();
