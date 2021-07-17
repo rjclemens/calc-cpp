@@ -49,12 +49,19 @@ int prec(std::string* s){
     return opmap[(*s)[0]].precedence; // 0 if unmapped
 }
 
-bool isNumber(std::string* s){
-    for(int i=0; i<(*s).length(); i++){
-        if(!isdigit((*s)[i]) || (*s)[i] != '.'){
-            return 0;
-        }
-    }
+// bool isNumber(std::string* s){
+//     for(int i=0; i<(*s).length(); i++){
+//         if(!isdigit((*s)[i]) || (*s)[i] != '.'){
+//             return 0;
+//         }
+//     }
+//     return 1;
+// }
+
+bool isNumber(std::string* s){ 
+    // try to convert string to double, if it fails, string must not be number
+    try{stod(*s);} 
+    catch (...) {return 0;}
     return 1;
 }
 
