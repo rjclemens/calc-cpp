@@ -2,6 +2,7 @@
 #define CALC_H
 
 #include <iostream>
+#include <cassert>
 #include <cmath>
 #include <math.h>
 #include <stack>
@@ -18,7 +19,7 @@ struct op{
     uint8_t assoc;
     uint8_t type;
 
-    op(char s, uint8_t p, uint8_t a, uint8_t t);
+    //op(char s, uint8_t p, uint8_t a, uint8_t t);
 
 };
 
@@ -34,6 +35,7 @@ bool contains(std::unordered_map<char, op>* um, std::string s);
 int prec(std::string* s);
 bool isNumber(std::string* s);
 int factorial(int f);
+bool isFunction(std::string& s);
 template <typename T> int sig(T val);
 std::string pop(std::stack<std::string>* st);
 std::string pop(std::queue<std::string>* q);
