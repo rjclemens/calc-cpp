@@ -1,28 +1,11 @@
-#ifndef CALC
-#define CALC
-
 #include "calc.h"
 
-#define LEFT 1
-#define RIGHT 2
-#define UNARY 0
-#define BINARY 1
-
-
-// op struct constructor
-// op::op(char s, uint8_t p, uint8_t a, uint8_t t){
-//         symbol = s;
-//         precedence = p;
-//         assoc = a;
-//         type = t;
-// }
-
 // perform stack pop & return operation in one command
-std::string pop(std::stack<std::string>* st){
+std::string pop(std::stack<std::string>& st){
     std::string s;
-    if(!(*st).empty()){ // if stack is not empty, pop it
-        s = (*st).top();
-        (*st).pop();
+    if(!st.empty()){ // if stack is not empty, pop it
+        s = st.top();
+        st.pop();
     }
     else{
         s = "stack empty lol";
@@ -31,11 +14,11 @@ std::string pop(std::stack<std::string>* st){
 }
 
 // perform queue pop & return operation in one command
-std::string pop(std::queue<std::string>* q){
+std::string pop(std::queue<std::string>& q){
     std::string s;
-    if(!(*q).empty()){
-        s = (*q).front();
-        (*q).pop();
+    if(!q.empty()){
+        s = q.front();
+        q.pop();
     }
     else{
         s = "q empty lol";
@@ -43,55 +26,73 @@ std::string pop(std::queue<std::string>* q){
     return s;
 }
 
-// returns true if string s is contained in unordered set us
-bool contains(std::unordered_set<std::string>* us, std::string s){
-    return (*us).find(s) != (*us).end();
-}
-
 // returns true if char c is contained in unordered map um
-bool contains(std::unordered_map<char, op>* um, char c){
-    return (*um).find(c) != (*um).end();
+bool contains(std::unordered_map<char, op>& um, char c){
+    return um.find(c) != um.end();
 }
 
 // returns true if string s is contained in unordered map um
-bool contains(std::unordered_map<char, op>* um, std::string s){
+bool contains(std::unordered_map<std::string, constant>& um, const std::string& s){
+    return um.find(s) != um.end();
+}
+
+// returns true if string s is contained in unordered map um
+bool contains(std::unordered_map<char, op>& um, const std::string& s){
     return s.length() == 1 && contains(um, s[0]); 
 }
 
-int prec(std::string* s){
-    return opmap[(*s)[0]].precedence; // 0 if unmapped
+// returns true if string s is contained in unordered map um
+bool contains(std::unordered_map<std::string, func>& um, const std::string& s){
+    return um.find(s) != um.end(); 
 }
 
-bool isNumber(std::string* s){
-    for(int i=0; i<(*s).length(); i++){
-        if(!isdigit((*s)[i]) && (*s)[i] != '.'){
-            return 0;
+// check if a given string contains a constant in constmap
+bool containsConst(std::string& s){
+    for(std::unordered_map<std::string, constant>::iterator iter = constmap.begin();
+        iter != constmap.end(); iter++){
+        // if key of constmap is contained in the string, return true
+        if(s.find(iter->first) != std::string::npos){
+            return 1;
         }
     }
-    return 1;
+    return 0;
 }
 
-void containsDigit(std::string& s){
-    for(int i=0; i<s.length(); i++){
-        if(isdigit(s[i]) && s[i] != '.'){
-            return;
-        }
-    }
-    throw std::invalid_argument("no digit");
+int prec(std::string& s){
+    return opmap[s[0]].precedence; // 0 if unmapped
 }
 
-bool isFunction(std::string& s){
-    return contains(&func_one, s) || contains(&func_two, s);
-}
-
-// bool isNumber(std::string* s){ 
-//     // try to convert string to double, if it fails, string must not be number
-//     try{stod(*s);} 
-//     catch (...) {return 0;}
+// bool isNumber(std::string& s){
+//     for(int i=0; i<s.length(); i++){
+//         if(!isdigit(s[i]) && s[i] != '.'){
+//             return 0;
+//         }
+//     }
 //     return 1;
 // }
 
-int factorial(int f){
+bool containsDigit(std::string& s){
+    for(int i=0; i<s.length(); i++){
+        if(isdigit(s[i]) && s[i] != '.'){
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void valid(std::string& s){
+    if(containsConst(s) || containsDigit(s)){ return; }
+    throw std::invalid_argument("invalid expression");
+}
+
+bool isNumber(std::string& s){ 
+    // try to convert string to double, if it fails, string must not be number
+    try{stod(s);} 
+    catch (...) {return 0;}
+    return 1;
+}
+
+double factorial(int f){
     if(f <= 1){ return 1; }
     return f * factorial(f-1);
 }
@@ -109,14 +110,14 @@ std::vector<std::string> parser(std::string input){
 
         if(input[i] == '-' || input[i] == '+'){
             // at beginning of input || in front of operator || in front of '('
-            if(i==0 || contains(&opmap, input[i-1]) || input[i-1] == '('){
+            if(i==0 || contains(opmap, input[i-1]) || input[i-1] == '('){
                 output.push_back(std::string(1, input[i]) + "1"); // "-1" or "+1"
                 output.push_back("*");
             }
             output.push_back(std::string() + input[i]);
         }
 
-        else if(contains(&opmap, input[i])){
+        else if(contains(opmap, input[i])){
             std::string s(1,input[i]);
             output.push_back(s);
         }
@@ -141,7 +142,7 @@ std::vector<std::string> parser(std::string input){
             std::string func = std::string(1, input[i]); // build string from first letter
             while(i+1 < input.length() && isalpha(input[i+1])){ // check next char
                 func += input[i+1];
-                if(contains(&constants,func)){ // if the string is a special constant
+                if(contains(constmap,func)){ // if the string is a special constant
                     break;
                 }
                 i++;
@@ -168,23 +169,22 @@ std::vector<std::string> parser(std::string input){
 }
 
 // return reverse polish notation (RPN- infix notation) of parsed expression
-std::queue<std::string>* shunting_yard(std::vector<std::string> input){
-    static std::queue<std::string> output;
+std::queue<std::string> shunting_yard(std::vector<std::string> input){
+    std::queue<std::string> output;
     std::stack<std::string> op_stack;
 
     for(int i=0; i<input.size(); i++){
-        std::string debugg = input[i];
-        if(isNumber(&input[i])){ // if number, put on output queue
+        if(isNumber(input[i]) || contains(constmap, input[i])){ // if number or constant, put on output queue
             output.push(input[i]);
         }
 
-        else if(contains(&opmap, input[i])){ // if string is an operator
+        else if(contains(opmap, input[i])){ // if string is an operator
             // while the top elem isnt '(' and its precedence is greater than the input operator
             // or equal but left associative,
             // pop the operator stack and store it on the output queue
             while((!op_stack.empty() && op_stack.top() != "(") && 
-                (prec(&op_stack.top()) > prec(&input[i]) ||
-                (prec(&op_stack.top()) == prec(&input[i]) && opmap[input[i][0]].assoc == LEFT))){
+                (prec(op_stack.top()) > prec(input[i]) ||
+                (prec(op_stack.top()) == prec(input[i]) && opmap[input[i][0]].assoc == LEFT))){
                 output.push(op_stack.top());
                 op_stack.pop();
             }
@@ -193,21 +193,21 @@ std::queue<std::string>* shunting_yard(std::vector<std::string> input){
         }
 
         // if input is a function or "(", push it on operator stack
-        else if(contains(&func_one, input[i]) || contains(&func_two, input[i]) || input[i] == "("){
+        else if(contains(funcmap, input[i]) || input[i] == "("){
             op_stack.push(input[i]);
         }
 
         else if(input[i] == ")"){ // input is a ")"
             // pop operator stack until it's empty or we reach a "("
             while(!op_stack.empty() && op_stack.top() != "("){ 
-                output.push(pop(&op_stack));
+                output.push(pop(op_stack));
             }
             
             assert(op_stack.top() == "("); // else mismatched parentheses
             op_stack.pop(); // discard the left parentheses
 
-            if(!op_stack.empty() && isFunction(op_stack.top())){ // if top op is a function
-                output.push(pop(&op_stack)); // pop it into output queue
+            if(!op_stack.empty() && contains(funcmap, op_stack.top())){ // if top op is a function
+                output.push(pop(op_stack)); // pop it into output queue
             }
             
         }
@@ -215,88 +215,16 @@ std::queue<std::string>* shunting_yard(std::vector<std::string> input){
         else if(input[i] == ","){ // discard comma, then:
             // pop off op_stack until outer function parentheses is reached
             while(!op_stack.empty() && op_stack.top() != "("){ 
-                output.push(pop(&op_stack));
+                output.push(pop(op_stack));
             }
         }
     }
 
     while(!op_stack.empty()){ // empty op_stack onto queue once input has been processed
-        output.push(pop(&op_stack));
+        output.push(pop(op_stack));
     }
     
-    return &output;
-}
-
-// perform a binary operation given an operator/function and two numbers
-std::string binary_op(std::string b1, std::string b2, std::string oper){
-    double x = std::stod(b2); // lower item is first item
-    double y = std::stod(b1);
-    double ans;
-
-    if(oper.length() == 1){
-        char op = oper[0];  
-
-        switch(op){
-            case '^': ans = std::pow(x,y); break;
-            case '*': ans = x*y; break;
-            case '/': ans = x/y; break;
-            case '+': ans = x+y; break;
-            case '-': ans = x-y; break;
-            case '%': ans = 1.0 * (((int) x) % ((int) y)); break;
-
-            default: ans = 6.93;
-        }
-    }
-
-    else{
-        if(oper == "max"){ ans = std::fmax(x,y); }
-        else if(oper == "min"){ ans = std::fmin(x,y); }
-        else if(oper == "mod"){ ans = 1.0 * (((int) x) % ((int) y)); }
-        else if(oper == "randr"){ ans = std::rand() * (y - x) + y; }
-        else if(oper == "randir"){ ans = (int) (std::rand() * (y - x) + y); }
-    }
-
-    return std::to_string(ans);
-}  
-
-std::string unary_op(std::string u1, std::string oper){
-    int x = std::stoi(u1);   
-    int ans;
-
-    if(oper.length() == 1){
-        char op = oper[0];
-        switch(op){
-            case '!': ans = factorial(x);
-
-            default: ans = 0;
-        }
-    }
-
-    else{
-        if(oper == "sin"){ ans = std::sin(x); }
-        else if(oper == "cos"){ ans = std::cos(x); }
-        else if(oper == "tan"){ ans = std::tan(x); }
-        else if(oper == "asin"){ ans = std::asin(x); }
-        else if(oper == "acos"){ ans = std::acos(x); }
-        else if(oper == "atan"){ ans = std::atan(x); }
-        else if(oper == "cosh"){ ans = std::cosh(x); }
-        else if(oper == "sinh"){ ans = std::sinh(x); }
-        else if(oper == "tanh"){ ans = std::tanh(x); }
-        else if(oper == "sqrt"){ ans = std::sqrt(x); }
-        else if(oper == "cbrt"){ ans = std::cbrt(x); }
-        else if(oper == "exp"){ ans = std::exp(x); }
-        else if(oper == "abs"){ ans = std::abs(x); }
-        else if(oper == "ceil"){ ans = std::ceil(x); }
-        else if(oper == "floor"){ ans = std::floor(x); }
-        else if(oper == "round"){ ans = std::round(x); }
-        else if(oper == "ln"){ ans = std::log(x); }
-        else if(oper == "log"){ ans = std::log10(x); }
-        else if(oper == "deg"){ ans = x*180/M_PI; }
-        else if(oper == "rad"){ ans = x*M_PI/180; }
-        else if(oper == "sign"){ ans = sig(x); }
-    }
-
-    return std::to_string(ans);
+    return output;
 }
 
 std::string compute(std::queue<std::string>& input){
@@ -305,36 +233,55 @@ std::string compute(std::queue<std::string>& input){
     while(!input.empty()){
         std::string q_front = input.front();
 
-        if(isNumber(&q_front)){
-            c_stack.push(pop(&input));
+        assert(q_front != "("); // make sure every "(" has been matched with ")" and removed in shunting-yard
+
+        if(isNumber(q_front)){
+            c_stack.push(pop(input));
         }
 
-        // if the next input is a binary operator or binary function
-        else if((contains(&opmap,q_front) && opmap[q_front[0]].type == BINARY) ||
-                contains(&func_two,q_front)){
-            c_stack.push(binary_op(pop(&c_stack), pop(&c_stack), pop(&input)));
+        // if the next input is a binary operator
+        else if((contains(opmap, q_front)) && opmap[q_front[0]].type == BINARY){
+            // compute operation and push on computation stack
+            c_stack.push(std::to_string(
+                opmap[pop(input)[0]].operate( // find operator in opmap and call its operation
+                    std::stod(pop(c_stack)), std::stod(pop(c_stack))))); // pop stack twice for operands
         }
 
-        // if the next input is a unary operator or unary function
-        else if((contains(&opmap,q_front) && opmap[q_front[0]].type == UNARY) ||
-                contains(&func_one,q_front)){
-            c_stack.push(unary_op(pop(&c_stack), pop(&input)));
+        // if the next input is a unary operator
+        else if((contains(opmap, q_front)) && opmap[q_front[0]].type == UNARY){
+            // compute operation and push on computation stack
+            c_stack.push(std::to_string(
+                opmap[pop(input)[0]].operate( // find operator in opmap and call its operation
+                    std::stod(pop(c_stack)), 0))); // pop stack once for operand (other operand useless)
+        }
+
+        // if the next input is a two-input function
+        else if((contains(funcmap, q_front)) && funcmap[q_front].type == TWO_INPUT){
+            // compute function and push on computation stack
+            c_stack.push(std::to_string(
+                funcmap[pop(input)].operate( // find function in funcmap and call its operation
+                    std::stod(pop(c_stack)), std::stod(pop(c_stack))))); // pop stack twice for inputs
+        }
+        
+        // if the next input is a one-input function
+        else if((contains(funcmap, q_front)) && funcmap[q_front].type == ONE_INPUT){
+            // compute function and push on computation stack
+            c_stack.push(std::to_string(
+                funcmap[pop(input)].operate( // find function in funcmap and call its operation
+                    std::stod(pop(c_stack)), 0))); // pop stack once for input (other input useless)
+        }
+        
+        // if the next input is a mathematical constant
+        else if(contains(constmap, q_front)){
+            c_stack.push(std::to_string(constmap[pop(input)].operate()));
         }
     }
 
-    return pop(&c_stack);
+    return pop(c_stack);
 }
 
 
 int main(int argc, char** argv){
-    // define operator keys in opmap
-    op op1{'+', 2, LEFT, BINARY};
-    op op2{'-', 2, LEFT, BINARY};
-    op op3{'*', 3, LEFT, BINARY};
-    op op4{'/', 3, LEFT, BINARY};
-    op op5{'%', 3, LEFT, BINARY};
-    op op6{'^', 4, RIGHT, BINARY};
-    op op7{'!', 5, LEFT, UNARY};
 
     opmap.emplace('+', op1);
     opmap.emplace('-', op2);
@@ -342,56 +289,64 @@ int main(int argc, char** argv){
     opmap.emplace('/', op4);
     opmap.emplace('%', op5);
     opmap.emplace('^', op6);
-    opmap.emplace('!', op7);    
+    opmap.emplace('!', op7);
 
-    constants.insert ({"e", "pi", "i"});
+    funcmap.emplace("sin", f1); 
+    funcmap.emplace("cos", f2); 
+    funcmap.emplace("tan", f3);  
+    funcmap.emplace("asin", f4); 
+    funcmap.emplace("acos", f5); 
+    funcmap.emplace("atan", f6);  
+    funcmap.emplace("sinh", f7); 
+    funcmap.emplace("cosh", f8); 
+    funcmap.emplace("tanh", f9);  
+    funcmap.emplace("sqrt", f10); 
+    funcmap.emplace("cbrt", f11); 
+    funcmap.emplace("exp", f12); 
+    funcmap.emplace("abs", f13);  
+    funcmap.emplace("ceil", f14); 
+    funcmap.emplace("floor", f15); 
+    funcmap.emplace("round", f16);  
+    funcmap.emplace("ln", f17); 
+    funcmap.emplace("log", f18); 
+    funcmap.emplace("deg", f19); 
+    funcmap.emplace("rad", f20); 
+    funcmap.emplace("sig", f21); 
+    funcmap.emplace("max", f22);  
+    funcmap.emplace("min", f23); 
+    funcmap.emplace("mod", f24); 
+    funcmap.emplace("randr", f25);   
+    funcmap.emplace("randir", f26);
 
-    func_one.insert ({"sin", "cos", "tan", 
-                        "asin", "acos", "atan", 
-                        "cosh", "sinh", "tanh", 
-                        "sqrt", "cbrt", "exp", 
-                        "abs", "ceil", "floor", 
-                        "round", "ln", "log", 
-                        "deg", "rad", "sign"});
-                                                
-    func_two.insert ({"max", "min", "mod", 
-                        "randr", "randir"});
+    constmap.emplace("e", c1);
+    constmap.emplace("pi", c2);
+    constmap.emplace("rt", c3);  
 
-    std::string expr = argv[1];
+    // std::string expr = argv[1];
 
-    //std::string expr = "max(10*2,5)";
+    std::cout << "input: ";
+    std::string expr;
+    std::getline(std::cin, expr);
 
     while(true){
-        // std::string expr = "max(5+5*2*2, 23)";
-        //std::cin >> expr;
+        
+        try{valid(expr);}
+        catch(...) { std::cout<< "invalid expression"; return 0;}
 
-        // std::string expr = "max(10*2,5)";
-
-        try{containsDigit(expr);}
-        catch(...) { return 0;}
-
-        // std::vector<std::string> xxx = parser(expr);
-        // for(int i=0; i<xxx.size(); i++){
-        //     std::cout << "\n" << xxx[i] << "ee";
-        // }
-
-        std::queue<std::string>* RPN = shunting_yard(parser(expr));
-        if(!RPN){ return 1; }
-
-        std::queue<std::string> RPN_copy = *RPN; 
+        std::queue<std::string> RPN = shunting_yard(parser(expr));
+        std::queue<std::string> RPN_copy = RPN;
 
         while(!RPN_copy.empty()){
-            std::cout << " " << RPN_copy.front();
+            std::cout << RPN_copy.front() << " ";
             RPN_copy.pop();
         }
-        std::cout << "\n output: ";
+        std::cout << "\noutput: ";
 
-        std::string ans = compute(*RPN);
-        std::cout << std::stod(ans) << "\n ";
+        std::string ans = compute(RPN);
+        std::cout << std::stod(ans) << "\n";
 
+        std::cout << "input: ";
         std::getline(std::cin, expr);
     }
 
 }
-
-#endif

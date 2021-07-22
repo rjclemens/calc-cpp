@@ -1,17 +1,19 @@
 SRCS=calc.cpp
-OBJS=$(subst .cpp,.o,$(SRCS))
+OBJS=calc.out
 FLGS=-std=c++17
+OPTS=-o2
 ARGS="max(23, 5+5*2*2)"
-all: build clean
-rall: run clean
 
-build: 
-	g++ $(SRCS) $(FLGS) -o $(OBJS)
-	./calc.o 
+all: build clean
+
+args: compile
+	./$(OBJS) $(ARGS)
+	
+build: compile
+	./$(OBJS)
 
 clean:
 	rm -f $(OBJS)
 
-run:
-	g++ $(SRCS) $(FLGS) -o $(OBJS)
-	./calc.o $(ARGS)
+compile:
+	g++ $(SRCS) $(OPTS) $(FLGS) -o $(OBJS)
