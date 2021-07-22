@@ -60,6 +60,7 @@ int prec(std::string& s);
 bool isNumber(std::string& s);
 double factorial(int f);
 bool containsDigit(std::string& s);
+bool containsConst(std::string& s);
 void valid(std::string& s);
 template <typename T> int sig(T val);
 std::string pop(std::stack<std::string>& st);

@@ -62,15 +62,6 @@ int prec(std::string& s){
     return opmap[s[0]].precedence; // 0 if unmapped
 }
 
-// bool isNumber(std::string& s){
-//     for(int i=0; i<s.length(); i++){
-//         if(!isdigit(s[i]) && s[i] != '.'){
-//             return 0;
-//         }
-//     }
-//     return 1;
-// }
-
 bool containsDigit(std::string& s){
     for(int i=0; i<s.length(); i++){
         if(isdigit(s[i]) && s[i] != '.'){
