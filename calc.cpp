@@ -3,26 +3,20 @@
 // perform stack pop & return operation in one command
 std::string pop(std::stack<std::string>& st){
     std::string s;
-    if(!st.empty()){ // if stack is not empty, pop it
-        s = st.top();
-        st.pop();
-    }
-    else{
-        s = "stack empty lol";
-    }
+    assert(!st.empty()); // make sure stack is not empty
+
+    s = st.top();
+    st.pop();
     return s;
 }
 
 // perform queue pop & return operation in one command
 std::string pop(std::queue<std::string>& q){
     std::string s;
-    if(!q.empty()){
-        s = q.front();
-        q.pop();
-    }
-    else{
-        s = "q empty lol";
-    }
+    assert(!q.empty()); // make sure queue is not empty
+
+    s = q.front();
+    q.pop();
     return s;
 }
 
@@ -32,18 +26,13 @@ bool contains(std::unordered_map<char, op>& um, char c){
 }
 
 // returns true if string s is contained in unordered map um
-bool contains(std::unordered_map<std::string, constant>& um, const std::string& s){
-    return um.find(s) != um.end();
-}
-
-// returns true if string s is contained in unordered map um
 bool contains(std::unordered_map<char, op>& um, const std::string& s){
     return s.length() == 1 && contains(um, s[0]); 
 }
 
 // returns true if string s is contained in unordered map um
-bool contains(std::unordered_map<std::string, func>& um, const std::string& s){
-    return um.find(s) != um.end(); 
+template <typename T> bool contains(std::unordered_map<std::string, T>& um, const std::string& s){
+    return um.find(s) != um.end();
 }
 
 // check if a given string contains a constant in constmap
@@ -71,11 +60,6 @@ bool containsDigit(std::string& s){
     return 0;
 }
 
-void valid(std::string& s){
-    if(containsConst(s) || containsDigit(s)){ return; }
-    throw std::invalid_argument("invalid expression");
-}
-
 bool isNumber(std::string& s){ 
     // try to convert string to double, if it fails, string must not be number
     try{stod(s);} 
@@ -93,19 +77,39 @@ template <typename T> int sig(T val){
     return (T(0) < val) - (T(0) > val);
 }
 
+void print_vars(){
+    std::cout << "VAR LIST:\n";
+    for(std::unordered_map<std::string, std::string>::iterator iter = variables.begin(); iter != variables.end(); iter++){
+        std::cout << "\tVAR: " << iter->first << " = ";
+        std::cout << iter->second << "\n";
+    }
+}
+
+void help(){
+    std::cout << "COMMAND LIST:\n";
+    std::cout << "\thelp.............................................help menu\n";
+    std::cout << "\tvars.......................................lists variables\n";
+    std::cout << "\tclear.....................................clears variables\n";
+}
+
 // parse expression into a vector of numbers, functions, operations
 std::vector<std::string> parser(std::string input){
     std::vector<std::string> output;
 
     for(int i=0; i<input.length(); i++){
 
-        if(input[i] == '-' || input[i] == '+'){
-            // at beginning of input || in front of operator || in front of '('
-            if(i==0 || contains(opmap, input[i-1]) || input[i-1] == '('){
-                output.push_back(std::string(1, input[i]) + "1"); // "-1" or "+1"
+        if(input[i] == '-'){
+            // if "->" is seen in input (storing operation)
+            if(i+1 != input.length() && input[i+1] == '>'){
+                output.push_back("@"); // single-char op to induce storing
+                ++i; // pushing two characters from input string
+            }
+            // at beginning of input || after an op || after a '('
+            else if(i==0 || contains(opmap, input[i-1]) || input[i-1] == '('){
+                output.push_back("-1"); 
                 output.push_back("*");
             }
-            output.push_back(std::string() + input[i]);
+            else { output.push_back(std::string() + input[i]); } // else push op alone onto stack
         }
 
         else if(contains(opmap, input[i])){
@@ -165,8 +169,8 @@ std::queue<std::string> shunting_yard(std::vector<std::string> input){
     std::stack<std::string> op_stack;
 
     for(int i=0; i<input.size(); i++){
-        if(isNumber(input[i]) || contains(constmap, input[i])){ // if number or constant, put on output queue
-            output.push(input[i]);
+        if(isNumber(input[i]) || contains(constmap, input[i])){ // if number, constant, or variable
+            output.push(input[i]); // put on output queue
         }
 
         else if(contains(opmap, input[i])){ // if string is an operator
@@ -200,13 +204,19 @@ std::queue<std::string> shunting_yard(std::vector<std::string> input){
             if(!op_stack.empty() && contains(funcmap, op_stack.top())){ // if top op is a function
                 output.push(pop(op_stack)); // pop it into output queue
             }
-            
         }
 
         else if(input[i] == ","){ // discard comma, then:
             // pop off op_stack until outer function parentheses is reached
             while(!op_stack.empty() && op_stack.top() != "("){ 
                 output.push(pop(op_stack));
+            }
+        }
+
+        else if(!containsDigit(input[i])){ // input is a non-function, non-const word
+            output.push(input[i]); // treat it as a variable
+            if(!contains(variables, input[i])){ // if this variable has not been defined yet
+                variables.emplace(input[i], "0"); // temp value for var
             }
         }
     }
@@ -232,18 +242,44 @@ std::string compute(std::queue<std::string>& input){
 
         // if the next input is a binary operator
         else if((contains(opmap, q_front)) && opmap[q_front[0]].type == BINARY){
-            // compute operation and push on computation stack
-            c_stack.push(std::to_string(
-                opmap[pop(input)[0]].operate( // find operator in opmap and call its operation
+            if(q_front == "@") { // storing operation
+                input.pop();
+                std::string var_name = pop(c_stack); // save var's name for last statement
+                std::string var_value = pop(c_stack);
+                // a -> b --> a b @ --> map[b] = a --> a's value is stored in b
+                variables[var_name] = var_value;
+                c_stack.push(variables[var_name]); // return the value assigned to variable
+            }
+            else{
+                // compute operation and push on computation stack
+                c_stack.push(std::to_string(
+                    opmap[pop(input)[0]].operate( // find operator in opmap and call its operation
                     std::stod(pop(c_stack)), std::stod(pop(c_stack))))); // pop stack twice for operands
+            }
         }
 
-        // if the next input is a unary operator
-        else if((contains(opmap, q_front)) && opmap[q_front[0]].type == UNARY){
-            // compute operation and push on computation stack
+        // if the next input is a one-input function
+        else if((contains(funcmap, q_front)) && funcmap[q_front].type == ONE_INPUT){
+            // compute function and push on computation stack
             c_stack.push(std::to_string(
-                opmap[pop(input)[0]].operate( // find operator in opmap and call its operation
-                    std::stod(pop(c_stack)), 0))); // pop stack once for operand (other operand useless)
+                funcmap[pop(input)].operate( // find function in funcmap and call its operation
+                    std::stod(pop(c_stack)), 0))); // pop stack once for input (other input useless)
+        }
+
+        // if next input is a variable
+        else if((contains(variables, q_front))){
+            std::string var_name = pop(input);
+            if(input.front() == "@"){ // if we are assigning the variable
+                c_stack.push(q_front); // push it directly onto computation stack
+            }
+            else{ // otherwise, push its value onto the computation stack
+                c_stack.push(variables[var_name]); 
+            }
+        }
+
+        // if the next input is a mathematical constant
+        else if(contains(constmap, q_front)){
+            c_stack.push(std::to_string(constmap[pop(input)].operate()));
         }
 
         // if the next input is a two-input function
@@ -253,19 +289,15 @@ std::string compute(std::queue<std::string>& input){
                 funcmap[pop(input)].operate( // find function in funcmap and call its operation
                     std::stod(pop(c_stack)), std::stod(pop(c_stack))))); // pop stack twice for inputs
         }
-        
-        // if the next input is a one-input function
-        else if((contains(funcmap, q_front)) && funcmap[q_front].type == ONE_INPUT){
-            // compute function and push on computation stack
+    
+        // if the next input is a unary operator
+        else if((contains(opmap, q_front)) && opmap[q_front[0]].type == UNARY){
+            // compute operation and push on computation stack
             c_stack.push(std::to_string(
-                funcmap[pop(input)].operate( // find function in funcmap and call its operation
-                    std::stod(pop(c_stack)), 0))); // pop stack once for input (other input useless)
+                opmap[pop(input)[0]].operate( // find operator in opmap and call its operation
+                std::stod(pop(c_stack)), 0))); // pop stack once for operand (other operand useless)
         }
-        
-        // if the next input is a mathematical constant
-        else if(contains(constmap, q_front)){
-            c_stack.push(std::to_string(constmap[pop(input)].operate()));
-        }
+    
     }
 
     return pop(c_stack);
@@ -273,7 +305,6 @@ std::string compute(std::queue<std::string>& input){
 
 
 int main(int argc, char** argv){
-
     opmap.emplace('+', op1);
     opmap.emplace('-', op2);
     opmap.emplace('*', op3);
@@ -281,6 +312,7 @@ int main(int argc, char** argv){
     opmap.emplace('%', op5);
     opmap.emplace('^', op6);
     opmap.emplace('!', op7);
+    opmap.emplace('@', op8);
 
     funcmap.emplace("sin", f1); 
     funcmap.emplace("cos", f2); 
@@ -311,18 +343,31 @@ int main(int argc, char** argv){
 
     constmap.emplace("e", c1);
     constmap.emplace("pi", c2);
-    constmap.emplace("rt", c3);  
+    constmap.emplace("rt", c3);
+
+    cmdmap.emplace("vars", cm1);  
+    cmdmap.emplace("clear", cm2); 
+    cmdmap.emplace("help", cm3); 
 
     // std::string expr = argv[1];
 
     std::cout << "input: ";
     std::string expr;
-    std::getline(std::cin, expr);
+    // std::getline(std::cin, expr);
+    expr = "1->x";
 
     while(true){
         
-        try{valid(expr);}
-        catch(...) { std::cout<< "invalid expression"; return 0;}
+        while(contains(cmdmap, expr)){
+            cmdmap[expr].operate(); // if a command is inputted, perform the command
+            std::cout << "input: ";
+            std::getline(std::cin, expr);
+        }
+
+        std::vector dbg = parser(expr);
+        for(int i=0; i<dbg.size(); i++){
+            std::cout << dbg[i] << " ";
+        }
 
         std::queue<std::string> RPN = shunting_yard(parser(expr));
         std::queue<std::string> RPN_copy = RPN;
@@ -336,8 +381,12 @@ int main(int argc, char** argv){
         std::string ans = compute(RPN);
         std::cout << std::stod(ans) << "\n";
 
+        variables["ans"] = ans; // save one previous answer in memory
+
         std::cout << "input: ";
         std::getline(std::cin, expr);
+
+        assert(expr != "quit");
     }
 
 }

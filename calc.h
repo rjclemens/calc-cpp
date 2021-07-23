@@ -46,23 +46,33 @@ struct constant{
     std::function<double ()> operate;
 };
 
+struct command{
+    std::string symbol;
+
+    std::function<void ()> operate;
+};
+
 std::unordered_map<char, op> opmap;
 std::unordered_map<std::string, func> funcmap;
 std::unordered_map<std::string, constant> constmap;
+std::unordered_map<std::string, std::string> variables;
+std::unordered_map<std::string, command> cmdmap;
+std::string prev_ans;
 
 
-bool contains(std::unordered_map<std::string, constant>& um, const std::string& s);
 bool contains(std::unordered_map<char, op>& um, char c);
 bool contains(std::unordered_map<char, op>& um, const std::string& s);
-bool contains(std::unordered_map<std::string, func>& um, const std::string& s);
+template <typename T> bool contains(std::unordered_map<std::string, T>& um, const std::string& s);
+
 
 int prec(std::string& s);
 bool isNumber(std::string& s);
 double factorial(int f);
 bool containsDigit(std::string& s);
 bool containsConst(std::string& s);
-void valid(std::string& s);
 template <typename T> int sig(T val);
+void print_vars();
+void help();
 std::string pop(std::stack<std::string>& st);
 std::string pop(std::queue<std::string>& q);
 
@@ -70,13 +80,14 @@ std::vector<std::string> parser(std::string input);
 std::queue<std::string> shunting_yard(std::vector<std::string> input);
 std::string compute(std::queue<std::string>& input);
 
-op op1{'+', 2, LEFT, BINARY, [] (double a, double b){return a + b;}};
-op op2{'-', 2, LEFT, BINARY, [] (double a, double b){return a - b;}};
-op op3{'*', 3, LEFT, BINARY, [] (double a, double b){return a * b;}};
-op op4{'/', 3, LEFT, BINARY, [] (double a, double b){return a / b;}};
+op op1{'+', 2, LEFT, BINARY, [] (double a, double b){return b + a;}};
+op op2{'-', 2, LEFT, BINARY, [] (double a, double b){return b - a;}};
+op op3{'*', 3, LEFT, BINARY, [] (double a, double b){return b * a;}};
+op op4{'/', 3, LEFT, BINARY, [] (double a, double b){return b / a;}};
 op op5{'%', 3, LEFT, UNARY, [] (double a, double b){return a / 100;}};
 op op6{'^', 4, RIGHT, BINARY, [] (double a, double b){return std::pow(b, a);}};
 op op7{'!', 5, LEFT, UNARY, [] (double a, double b){return factorial(a);}};
+op op8{'@', 1, LEFT, BINARY, [] (double a, double b){return b;}};
 
 func f1{"sin", ONE_INPUT, [] (double a, double b){return std::sin(a);}};
 func f2{"cos", ONE_INPUT, [] (double a, double b){return std::cos(a);}};
@@ -109,5 +120,9 @@ func f26{"randir", TWO_INPUT, [] (double a, double b) {return (int) (std::rand()
 constant c1{"e", [] () {return M_E;}};
 constant c2{"pi", [] () {return M_PI;}};
 constant c3{"rt", [] () {return M_SQRT2;}};
+
+command cm1{"vars", [] () {return print_vars();}};
+command cm2{"clear", [] () {return variables.clear();}};
+command cm3{"help", [] () {return help();}};
 
 #endif
