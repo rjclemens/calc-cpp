@@ -1,7 +1,7 @@
-SRCS=calc.cpp
+SRCS=$(wildcard *.cpp)
 OBJS=calc.out
 FLGS=-std=c++17
-OPTS=-o2
+OPTS=-o2 -g
 ARGS="max(23, 5+5*2*2)"
 
 all: build clean
@@ -17,3 +17,6 @@ clean:
 
 compile:
 	g++ $(SRCS) $(OPTS) $(FLGS) -o $(OBJS)
+
+run:
+	./$(OBJS)

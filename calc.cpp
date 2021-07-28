@@ -60,9 +60,9 @@ bool containsDigit(std::string& s){
     return 0;
 }
 
-bool isNumber(std::string& s){ 
-    // try to convert string to double, if it fails, string must not be number
-    try{stod(s);} 
+bool isCmplx(std::string& s){
+    // try to convert string to complex, if it fails, string must not be number
+    try{str_to_cmplx(s);} 
     catch (...) {return 0;}
     return 1;
 }
@@ -93,10 +93,10 @@ void help(){
 }
 
 // parse expression into a vector of numbers, functions, operations
-std::vector<std::string> parser(std::string input){
+std::vector<std::string> parser(std::string& input){
     std::vector<std::string> output;
 
-    for(int i=0; i<input.length(); i++){
+   for(int i=0; i<input.length(); i++){
 
         if(input[i] == '-'){
             // if "->" is seen in input (storing operation)
@@ -133,6 +133,20 @@ std::vector<std::string> parser(std::string input){
             }
         }
 
+        else if (isdigit(input[i]) || input[i] == '.' || input[i] == 'j'){
+            std::string number = std::string(1, input[i]); // build string from first digit
+            // check next char
+            while(i+1 < input.length() && (isdigit(input[i+1]) || input[i+1] == '.' || input[i+1] == 'j')){ 
+                number += input[i+1];
+                i++;
+            }
+            output.push_back(number);
+
+            if(i+1 < input.length() && isalpha(input[i+1])){
+                output.push_back("*");
+            }
+        }
+
         else if(isalpha(input[i])){
             std::string func = std::string(1, input[i]); // build string from first letter
             while(i+1 < input.length() && isalpha(input[i+1])){ // check next char
@@ -145,16 +159,6 @@ std::vector<std::string> parser(std::string input){
             output.push_back(func);
         }
 
-        else if (isdigit(input[i]) || input[i] == '.'){
-            std::string number = std::string(1, input[i]); // build string from first digit
-            // check next char
-            while(i+1 < input.length() && (isdigit(input[i+1]) || input[i+1] == '.')){ 
-                number += input[i+1];
-                i++;
-            }
-            output.push_back(number);
-        }
-
         else if(input[i] == ',') // dont discard commas for multi-input functions
             output.push_back(",");
     }
@@ -164,12 +168,12 @@ std::vector<std::string> parser(std::string input){
 }
 
 // return reverse polish notation (RPN- infix notation) of parsed expression
-std::queue<std::string> shunting_yard(std::vector<std::string> input){
+std::queue<std::string> shunting_yard(std::vector<std::string>& input){
     std::queue<std::string> output;
     std::stack<std::string> op_stack;
 
     for(int i=0; i<input.size(); i++){
-        if(isNumber(input[i]) || contains(constmap, input[i])){ // if number, constant, or variable
+        if(isCmplx(input[i]) || contains(constmap, input[i])){ // if number, constant, or variable
             output.push(input[i]); // put on output queue
         }
 
@@ -236,7 +240,7 @@ std::string compute(std::queue<std::string>& input){
 
         assert(q_front != "("); // make sure every "(" has been matched with ")" and removed in shunting-yard
 
-        if(isNumber(q_front)){
+        if(isCmplx(q_front)){
             c_stack.push(pop(input));
         }
 
@@ -252,18 +256,18 @@ std::string compute(std::queue<std::string>& input){
             }
             else{
                 // compute operation and push on computation stack
-                c_stack.push(std::to_string(
+                c_stack.push(cmplx_to_str(
                     opmap[pop(input)[0]].operate( // find operator in opmap and call its operation
-                    std::stod(pop(c_stack)), std::stod(pop(c_stack))))); // pop stack twice for operands
+                    str_to_cmplx(pop(c_stack)), str_to_cmplx(pop(c_stack))))); // pop stack twice for operands
             }
         }
 
         // if the next input is a one-input function
         else if((contains(funcmap, q_front)) && funcmap[q_front].type == ONE_INPUT){
             // compute function and push on computation stack
-            c_stack.push(std::to_string(
+            c_stack.push(cmplx_to_str(
                 funcmap[pop(input)].operate( // find function in funcmap and call its operation
-                    std::stod(pop(c_stack)), 0))); // pop stack once for input (other input useless)
+                    str_to_cmplx(pop(c_stack)), 0))); // pop stack once for input (other input useless)
         }
 
         // if next input is a variable
@@ -279,23 +283,23 @@ std::string compute(std::queue<std::string>& input){
 
         // if the next input is a mathematical constant
         else if(contains(constmap, q_front)){
-            c_stack.push(std::to_string(constmap[pop(input)].operate()));
+            c_stack.push(cmplx_to_str(constmap[pop(input)].operate()));
         }
 
         // if the next input is a two-input function
         else if((contains(funcmap, q_front)) && funcmap[q_front].type == TWO_INPUT){
             // compute function and push on computation stack
-            c_stack.push(std::to_string(
+            c_stack.push(cmplx_to_str(
                 funcmap[pop(input)].operate( // find function in funcmap and call its operation
-                    std::stod(pop(c_stack)), std::stod(pop(c_stack))))); // pop stack twice for inputs
+                    str_to_cmplx(pop(c_stack)), str_to_cmplx(pop(c_stack))))); // pop stack twice for inputs
         }
     
         // if the next input is a unary operator
         else if((contains(opmap, q_front)) && opmap[q_front[0]].type == UNARY){
             // compute operation and push on computation stack
-            c_stack.push(std::to_string(
+            c_stack.push(cmplx_to_str(
                 opmap[pop(input)[0]].operate( // find operator in opmap and call its operation
-                std::stod(pop(c_stack)), 0))); // pop stack once for operand (other operand useless)
+                str_to_cmplx(pop(c_stack)), 0))); // pop stack once for operand (other operand useless)
         }
     
     }
@@ -354,7 +358,7 @@ int main(int argc, char** argv){
     std::cout << "input: ";
     std::string expr;
     // std::getline(std::cin, expr);
-    expr = "1->x";
+    expr = "5+7j+8+6j";
 
     while(true){
         
@@ -365,11 +369,11 @@ int main(int argc, char** argv){
         }
 
         std::vector dbg = parser(expr);
-        for(int i=0; i<dbg.size(); i++){
-            std::cout << dbg[i] << " ";
-        }
+//        for(int i=0; i<dbg.size(); i++){
+//            std::cout << dbg[i] << " ";
+//        }
 
-        std::queue<std::string> RPN = shunting_yard(parser(expr));
+        std::queue<std::string> RPN = shunting_yard(dbg);
         std::queue<std::string> RPN_copy = RPN;
 
         while(!RPN_copy.empty()){
@@ -379,7 +383,7 @@ int main(int argc, char** argv){
         std::cout << "\noutput: ";
 
         std::string ans = compute(RPN);
-        std::cout << std::stod(ans) << "\n";
+        std::cout << ans << "\n";
 
         variables["ans"] = ans; // save one previous answer in memory
 
