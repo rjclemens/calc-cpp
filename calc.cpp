@@ -134,7 +134,8 @@ std::vector<std::string> parser(std::string& input){
         }
 
         else if (isdigit(input[i]) || input[i] == '.' || input[i] == 'j'){
-            std::string number = std::string(1, input[i]); // build string from first digit
+            // j --> 1j, if input not j, build it as string with one char
+            std::string number = (input[i] == 'j') ? "1j" : std::string(1, input[i]); 
             // check next char
             while(i+1 < input.length() && (isdigit(input[i+1]) || input[i+1] == '.' || input[i+1] == 'j')){ 
                 number += input[i+1];
@@ -150,11 +151,10 @@ std::vector<std::string> parser(std::string& input){
         else if(isalpha(input[i])){
             std::string func = std::string(1, input[i]); // build string from first letter
             while(i+1 < input.length() && isalpha(input[i+1])){ // check next char
-                func += input[i+1];
+                func += input[++i]; // increment, then assign
                 if(contains(constmap,func)){ // if the string is a special constant
                     break;
                 }
-                i++;
             }
             output.push_back(func);
         }
@@ -358,7 +358,7 @@ int main(int argc, char** argv){
     std::cout << "input: ";
     std::string expr;
     // std::getline(std::cin, expr);
-    expr = "5+7j+8+6j";
+    expr = "pi*e^(jpi)";
 
     while(true){
         
