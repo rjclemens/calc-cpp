@@ -22,9 +22,8 @@ complex operator/(const complex& lhs, const complex& rhs){ // (a+ib)/(c+id)
 }
 
 complex operator^(const complex& lhs, const complex& rhs){
-    if(same(lhs.im, 0) && same(lhs.re, M_E)){ // deal with euler
-        return exp(rhs);
-    }
+    if(same(lhs.im, 0) && same(lhs.re, M_E)){ return exp(rhs);} // deal with euler
+
     double new_mag = std::pow(mag(lhs), rhs.re);
     double new_arg = angle(lhs.re, lhs.im) * rhs.re;
     return complex(new_mag * std::cos(new_arg), new_mag * std::sin(new_arg)); 
@@ -33,6 +32,7 @@ complex operator^(const complex& lhs, const complex& rhs){
 // convert a number to its complex form
 complex str_to_cmplx(const std::string& s){
     size_t index = s.find("+");
+
     if(index != std::string::npos){ // if '+' is contained in s
         return complex(std::stod(s.substr(0,index)), std::stod(s.substr(index+1, s.length()-index-2)));
     }
@@ -47,12 +47,9 @@ complex str_to_cmplx(const std::string& s){
 }
 
 std::string cmplx_to_str(const complex& c){
-    if(same(c.re, 0)){
-        return std::to_string(c.im) + "j"; 
-    }
-    if(same(c.im, 0)){
-        return std::to_string(c.re);
-    }
+    if(same(c.re, 0)){ return std::to_string(c.im) + "j";}
+    if(same(c.im, 0)){ return std::to_string(c.re);}
+    
     std::string op = (c.im > 0) ? "+" : ""; // change +- to just -
     return std::to_string(c.re) + op + std::to_string(c.im) + "j"; 
 }

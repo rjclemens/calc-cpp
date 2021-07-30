@@ -12,7 +12,6 @@
 
 #include <iostream>
 #include <cassert>
-#include <variant>
 #include <cmath>
 #include <math.h>
 #include <stack>
